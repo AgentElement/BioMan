@@ -735,5 +735,5 @@ for i in range(0, loops):
 
 print("This benchmark completed " + str(loops) + " iterations in " + str(time_dif) + " nanoseconds and " + str(time_avg_s) + " seconds.");
 print("That means there the simulation completed an iteration in " + str(time_dif/loops) + " nanoseconds and "+ str(time_avg_s/loops) + " seconds on average.");
-Put_something_into_csv(['Average: ', str(time_avg_s/loops)], 'BioMan_Benchmark.csv');
+Put_something_into_csv(["Average: ", str(time_avg_s/loops)], 'BioMan_Benchmark.csv');
 #df_this_design.to_csv('Events_info.csv')
