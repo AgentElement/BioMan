@@ -15,6 +15,7 @@ import scipy.stats as stats
 
 #Import added for benchmark testing.
 from time import perf_counter_ns
+from sys import argv
 
 def Put_something_into_csv(something, fname):
     with open(fname, "a") as csvfile:
@@ -567,6 +568,8 @@ class Environment():
                 next_event = toolbox.Event('Patient {} arrival at {}'.format(this_job.name, self.queue_3.name), 'Arrival', self.clock, self.queue_3, None, None, this_job)
             self.add_event(next_event)
             
+        #BUG: next_event is never assigned a value if (this_job.rework_count > self.max_rework_times), which causes an UnboundLocalError on line 589. 
+        # Found by Nolan M. on August 30th, 2022.
         elif this_event.e_type == 'Start_QC':
             this_job = this_event.job
             #process event
@@ -706,23 +709,31 @@ def translate_into_design(item):
     return res
 
 #Benchmark testing start.
-time_start = perf_counter_ns();
+Put_something_into_csv(['Iteration', 'Start Time(ns)', 'End Time(ns)', 'Net Time(ns)', 'Net Time(s)'], 'BioMan_Benchmark.csv');
+time_avg = 0;
+loops = int(argv[1])
 
-design_file = 'Design_enumerate.csv'
-df_design = pd.read_csv(design_file)
-#for row in range(0,1):
-for row in range(0,len(df_design)):
-    Design = []
-    for col in range(0,7):
-        res = translate_into_design(df_design.iloc[row, col])
-        Design.append(res)
-    group_num = row
-    Env = Environment(Design, group_num)
-    df_this_design = Env.Simulate()
+for i in range(0, loops):
+    time_start = perf_counter_ns();
+    design_file = 'Design_enumerate.csv'
+    df_design = pd.read_csv(design_file)
+    #for row in range(0,1):
+    for row in range(0,len(df_design)):
+        Design = []
+        for col in range(0,7):
+            res = translate_into_design(df_design.iloc[row, col])
+            Design.append(res)
+        group_num = row
+        Env = Environment(Design, group_num)
+        df_this_design = Env.Simulate()
+    #Benchmark testing ends.
+    time_end = perf_counter_ns();
+    time_dif = time_end - time_start;
+    Put_something_into_csv([str(i), str(time_start), str(time_end), str(time_dif), str(time_dif/1000000000)], 'BioMan_Benchmark.csv');
+    time_avg = time_avg + time_dif;
+    time_avg_s = time_avg/1000000000;
 
-#Benchmark testing ends.
-time_end = perf_counter_ns();
-print("Start Time in nanoseconds: ", time_start);
-print("End Time in nanoseconds: ", time_end);
-print("Net time simulation took from start to finish in nanoseconds: ", time_end - time_start);
+print("This benchmark completed " + str(loops) + " iterations in " + str(time_dif) + " nanoseconds and " + str(time_avg_s) + " seconds.");
+print("That means there the simulation completed an iteration in " + str(time_dif/loops) + " nanoseconds and "+ str(time_avg_s/loops) + " seconds on average.");
+Put_something_into_csv(['Average: ', str(time_avg_s/loops)], 'BioMan_Benchmark.csv');
 #df_this_design.to_csv('Events_info.csv')
