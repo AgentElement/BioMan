@@ -566,6 +566,8 @@ class Environment():
                 next_event = toolbox.Event('Patient {} arrival at {}'.format(this_job.name, self.queue_3.name), 'Arrival', self.clock, self.queue_3, None, None, this_job)
             self.add_event(next_event)
             
+        #BUG: next_event is never assigned a value if (this_job.rework_count <= self.max_rework_times) is false on line 578, which causes an UnboundLocalError on line 587. 
+        # Found by Nolan M. on August 30th, 2022.
         elif this_event.e_type == 'Start_QC':
             this_job = this_event.job
             #process event
