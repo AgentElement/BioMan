@@ -13,22 +13,52 @@ import random
 import csv
 import scipy.stats as stats
 
-
+#TODO: 12 more docstring headers; 35 total between both docs
+#COMPLETED: 11 docstring headers
 
 def Put_something_into_csv(something, fname):
+    """
+    Takes the first argument as a string and writes it into a file named after the value of the second argument.
+    
+    Returns void.
+    """
     with open(fname, "a") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(something)
 
 def Truncated_Norm_gen(lower, mu, sigma):
+    """
+    Generates a random number from a truncated normal distribution.
+    
+    Parameters: 
+    lower(float): a lower bound for the disribution
+    mu (float): the desired mean
+    sigma (float): the desired standard deviation to use to generate the distribution.
+
+    Returns:
+    float: randomly genereated number.
+    """
     upper = mu + (mu - lower)
+    #Generates a random variable/randomizer based on a truncated normal distribution.
     X = stats.truncnorm(
         (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+    #Genereates an array of random numbers of size 1 and grabs the first number from the array.
     res = X.rvs(1)[0]
     return res
 
 class Environment():
+    """
+    A class that is responisble for tracking the stages the simulation is running in. Also sets the relevant 
+    constants that will affect the way the jobs are run and processed through the simulation.
+    """
     def __init__(self, Design, group_num):
+        """
+        Constructor for Environment which initializes with all the constants it will use.
+
+        Parameters:
+        Design (string array): Designates what mixes and machines will run.
+        group_num (int): unique identifier grouping together all events run in this environment instance.
+        """
         self.event_list = []
         self.clock = 0
         self.global_state = 'Initial'
@@ -103,7 +133,10 @@ class Environment():
             
     def Machine_and_Operator_Setup(self):
         """
-        Sets up the job list, mfg and hrv operators and machines  
+        Sets up the job list, mfg and hrv operators and machines
+
+        Returns:
+        void
         """
         self.job_list = []  #Job is defined by patient arrival function 
         self.queue_1 = toolbox.Queue('Queue_1', 'Machine_queue')
@@ -122,10 +155,11 @@ class Environment():
         
         
     def get_event(self):
-        '''
-        Gets the first event in the event list
+        """
+        Returns:
+        Event: First event in the event list
         https://github.com/tkralphs/PyQueueSim/blob/master/QueueSim.py
-        '''        
+        """
         #event = self.event_list.pop()
         #self.clock = event.e_happen_time
         
@@ -147,12 +181,21 @@ class Environment():
     def add_event(self, event):
         """
         Add event to event_list.
+
+        Returns:
+        void
         """
         self.event_list.append(event)
         return
     
     
     def get_current_state(self):
+        """
+        Returns:
+        string array: Current state of the machine. Will follow the following format:\n
+        [ hrv_operator_state_list, mfg_operator_state_list, hrv_machine_state_list, mfg_machine_state_list,
+            q1_state_list, q2_state_list, q3_state_list, q4_state_list, q5_state_list, job_state_list, event_list ]
+        """
         #get state info for the machine, operator,queue, job
         hrv_operator_state_list = [o.state for o in self.hrv_operator_list]
         mfg_operator_state_list = [o.state for o in self.mfg_operator_list]
@@ -171,6 +214,14 @@ class Environment():
         return current_state_info
     
     def get_rework_state(self):
+        """
+        Provides an array listing out the current state of each Job in the environment:
+        - If a Job is current in rework, the Job's status will be recorded as \"In rework\".\n
+        - Otherwise, the Job's status will be recorded as \"Not in rework\".
+        
+        Returns:
+        string array: Holds the state of every current job in the order the environment has them sorted in.
+        """
         rework_state_list=[]
         for job in self.job_list:
             if job.rework_count >0 and job.state != 'Finish':
@@ -182,6 +233,9 @@ class Environment():
     def Simulate(self):
         """
         This is the simulation of the factory.
+
+        Returns:
+        Data Frame: Holds every event the environment ran and the state of the machine at the time the event was started.
         """
         output_file = 'results/Event_information_group_{}.csv'.format(self.group_num)
         header = ['Clock', 'Event name', 'Event type', 'Event happen time', 'Event place', 'Event machine', 'Event operator', 'Event job', 
@@ -233,6 +287,15 @@ class Environment():
     
     
     def Job_generator(self, name, place, state):
+        """
+        Parameters:
+        name (string): name for the Job
+        place (string): location the Job is fulfilled in.
+        state (string): current state of the Job.
+
+        Returns:
+        Job: A new instance of Job with the given name, place, and state passed in.
+        """
         job = toolbox.Job(name, place, state)
         #good bad or average patient
         job.pt_type = random.choices(['bad', 'average', 'good'], weights = [self.bad_pat_rate, self.avg_pat_rate, self.good_pat_rate])[0]
