@@ -4,7 +4,7 @@ This Bio Manufatcuring Simulator is composed of two files: (1) BM_Factory.py (2)
 ## Benchmarking
 To run a benchmark test, use the following command:
 
-python3 BM_Factory_Benchmarker.py *n*
+> python3 BM_Factory_Benchmarker.py *n*
 
 Where *n* is some integer value that indicates how many times in a row to run the simulator.
 
