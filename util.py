@@ -1,6 +1,4 @@
 from collections import deque
-import heapq
-#  from event import Event
 
 
 class QueueError(Exception):
@@ -71,19 +69,3 @@ class BusyQueue:
 
     def pop(self):
         return self.__free_q.popleft()
-
-
-# Priority queue for events
-class EventQueue:
-    def __init__(self):
-        self.__buf = []
-
-    def push(self, e):
-        heapq.heappush(self.__buf, (e.time, e))
-
-    def pop(self):
-        popped = heapq.heappop(self.__buf)
-        return popped[1]
-
-    def empty(self):
-        return len(self.__buf) == 0

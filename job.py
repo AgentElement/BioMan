@@ -32,8 +32,10 @@ class Patient:
                  pconfig: PatientConfig):
         self.gender = gender
         self.ptype = ptype
-        self.blood_volume = np.random.uniform(low=pconfig.blood_vol_range[0],
-                                              high=pconfig.blood_vol_range[1])
+        self.blood_volume = np.random.uniform(
+            low=pconfig.blood_vol_range[gender.value].low,
+            high=pconfig.blood_vol_range[gender.value].high
+        )
         self.target_blood_count = pconfig.conversion_factor * self.blood_volume
         self.pconfig = pconfig
 
@@ -41,18 +43,20 @@ class Patient:
     def random(pconfig: PatientConfig):
         """Generate a random patient"""
         gr = pconfig.gender_ratio
-        gender = random.choices(P_Gender, weights=[gr, 1 - gr])[0]
-        ptype = random.choices(P_Type, weights=pconfig.patient_rates)[0]
-        return Patient(gender, ptype)
+        gender = random.choices(list(P_Gender), weights=[gr, 1 - gr])[0]
+        ptype = random.choices(list(P_Type), weights=pconfig.patient_rates)[0]
+        return Patient(gender, ptype, pconfig)
 
     def __str__(self):
-        print(self.gender, self.ptype, self.blood_volume, self.target_blood_count)
+        return f"Patient {self.gender}, {self.ptype}, " \
+                f"{self.blood_volume}, {self.target_blood_count}"
 
 
 class JobState(Enum):
+    BUSY = 0
     IDLE = 1
     SETUP = 2
-    BUSY = 0
+    DONE = 3
 
 
 class Job(Queueable):
@@ -117,7 +121,7 @@ class ProcessJob(Job):
         return res
 
     def calculate_yield(self, duration, config: Config):
-        target_bc = self.patient.target_bloodcount
+        target_bc = self.patient.target_blood_count
         target_low = target_bc / config.slope.low
         target_high = target_low + config.delta_t
         target_zero = target_high + target_bc / config.slope.high
@@ -127,7 +131,7 @@ class ProcessJob(Job):
         elif duration > target_low and duration <= target_high:
             p_yield = target_bc
         elif duration > target_high and duration <= target_zero:
-            p_yield = target_bc - self.slope.high * (duration - target_high)
+            p_yield = target_bc - config.slope.high * (duration - target_high)
         elif duration > target_zero:
             p_yield = 0
 
@@ -137,7 +141,7 @@ class ProcessJob(Job):
                 p_yield, mu, config.yield_standard_deviation
             )
 
-        p_yield *= self.patient.ptype
+        p_yield *= self.patient.ptype.value
 
         if p_yield <= target_bc:
             p_yield /= target_bc
@@ -150,4 +154,3 @@ class ProcessJob(Job):
 class HarvestJob(Job):
     def __init__(self, patient: Patient):
         super().__init__(patient)
-        pass

@@ -8,6 +8,10 @@ from machine import Machine
 from operator import Operator
 
 
+class EventException:
+    pass
+
+
 class EventType(Enum):
     ARRIVAL = 'Arrival'
     DEPARTURE = 'Departure'
@@ -32,7 +36,6 @@ class Event:
         self.event_type = event_type
         self.time = time
 
-        self.place = None
         self.machine = None
         self.operator = None
         self.job = None
@@ -41,10 +44,6 @@ class Event:
 
     def __str__(self) -> str:
         return f"Event {self.event_type}  at {self.time}"
-
-    def place(self, place) -> Event:
-        self.place = place
-        return self
 
     def machine(self, machine: Machine) -> Event:
         self.machine = machine
