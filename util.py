@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import deque
 
 
@@ -10,11 +12,11 @@ class Queueable:
     def __init__(self):
         self.__queued = False
 
-    def set_queued(self, queue_state: bool):
+    def set_queued(self, queue_state: bool) -> Queueable:
         self.__queued: bool = queue_state
         return self
 
-    def queued(self):
+    def queued(self) -> bool:
         return self.__queued
 
 
@@ -26,19 +28,20 @@ class Queue:
         self.inverting = inverting
         self.__buf = deque(init_elems)
 
-    def peek(self):
+    def peek(self) -> Queueable:
         if len(self.__buf) == 0:
             raise IndexError
         return self.__buf[0]
 
-    def push(self, i: Queueable):
+    def push(self, i: Queueable) -> Queue:
         if i.queued():
             raise QueueError
 
         i.set_queued(not self.inverting)
         self.__buf.append(i)
+        return self
 
-    def pop(self):
+    def pop(self) -> Queueable:
         popped = self.__buf.popleft()
         popped.set_queued(self.inverting)
         return popped
@@ -51,21 +54,26 @@ class BusyQueue:
         map(lambda q: q.set_queued(False), init_elems)
         self.__free_q = deque(init_elems)
 
-    def make_busy(self):
+    def make_busy(self) -> Queueable:
         queueable = self.__free_q.popleft().set_queued(True)
         self.__busy_q.append(queueable)
         return queueable
 
-    def free(self):
+    def make_free(self) -> Queueable:
         queueable = self.__busy_q.popleft().set_queued(False)
         self.__free_q.append(queueable)
         return queueable
 
-    def push(self, i: Queueable):
+    def push(self, i: Queueable) -> BusyQueue:
         if i.queued():
             raise QueueError
 
         self.__free_q.append(i)
+        return self
 
-    def pop(self):
+    def pop(self) -> Queueable:
         return self.__free_q.popleft()
+
+    # Are all queueables busy?
+    def busy(self) -> bool:
+        return len(self.__free_q) == 0
