@@ -13,17 +13,27 @@ class EventException:
 
 
 class EventType(Enum):
-    ARRIVAL = 'Arrival'
-    DEPARTURE = 'Departure'
+    PROCESS_ARRIVAL = 'Process_Arrival'
+    HARVEST_ARRIVAL = 'Harvest_Arrival'
+    QC_ARRIVAL = 'QC_Arrival'
+
+    PROCESS_DEPARTURE = 'Departure'
+    HARVEST_DEPARTURE = 'Departure'
+    QC_DEPARTURE = 'Departure'
+
     START_SETUP = 'Start_Setup'
     END_SETUP = 'End_Setup'
+
     START_HARVESTING = 'Start_Harvesting'
     END_HARVESTING = 'End_Harvesting'
+
     START_PROCESSING = 'Start_Processing'
     END_PROCESSING = 'End_Processing'
-    COLLECT = 'Collect'
+
     START_QC = 'Start_QC'
     END_QC = 'End_QC'
+
+    COLLECT = 'Collect'
 
 
 class Event:
@@ -63,7 +73,7 @@ class EventQueue:
     def __init__(self):
         self.__buf = []
 
-    def push(self, e):
+    def push(self, e: Event):
         heapq.heappush(self.__buf, (e.time, e))
 
     def pop(self):
