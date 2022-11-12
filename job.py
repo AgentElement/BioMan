@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 
 from scipy import stats
@@ -47,7 +49,7 @@ class Patient:
         ptype = random.choices(list(P_Type), weights=pconfig.patient_rates)[0]
         return Patient(gender, ptype, pconfig)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Patient {self.gender}, {self.ptype}, " \
             f"{self.blood_volume}, {self.target_blood_count}"
 
@@ -74,13 +76,14 @@ class Job(Queueable):
         self.status = JobStatus.IDLE
         self.process_yield = 0
 
-    def set_status(self, status: JobStatus):
+    def set_status(self, status: JobStatus) -> Job:
         self.status = status
+        return self
 
-    def harvest_yield(self):
+    def harvest_yield(self) -> float:
         return 0.8 * self.patient.target_blood_count
 
-    def attempt_rework(self, rework_time: float):
+    def attempt_rework(self, rework_time: float) -> Job:
         self.process_time = -1
         self.collect_time = -1
         self.status = JobStatus.IDLE
@@ -88,20 +91,20 @@ class Job(Queueable):
         self.rework_times.append(rework_time)
         return self
 
-    def rework_attempts(self):
+    def rework_attempts(self) -> int:
         return len(self.rework_times)
 
-    def set_process_times(self, start: float, end: float):
-        self.start_process_time = start 
+    def set_process_times(self, start: float, end: float) -> Job:
+        self.start_process_time = start
         self.end_process_time = end
         return self
 
-    def set_collect_time(self, clock: float):
+    def set_collect_time(self, clock: float) -> Job:
         self.collect_time = clock
         return self
 
     @staticmethod
-    def truncated_norm(lower, mu, sigma):
+    def truncated_norm(lower, mu, sigma) -> float:
         """
         Generates a random number from a truncated normal distribution.
 
@@ -132,10 +135,10 @@ class Job(Queueable):
 
         return target_low, target_high, target_zero
 
-    def calculate_harvest_duration(self):
+    def calculate_harvest_duration(self) -> int:
         return np.random.randint(6, 9)
 
-    def calculate_process_duration(self, config: Config):
+    def calculate_process_duration(self, config: Config) -> float:
         target_bc, target_low, target_high, target_zero = self.targets(config)
         process_duration = random.choices([
             np.random.uniform(0, target_low),
@@ -145,7 +148,7 @@ class Job(Queueable):
         process_duration_in_hours = process_duration * 24
         return process_duration_in_hours
 
-    def calculate_yield(self, duration, config: Config):
+    def calculate_yield(self, config: Config) -> float:
         if self.status not in [JobStatus.PROCESSED, JobStatus.DONE]:
             raise JobError
 
@@ -178,10 +181,14 @@ class Job(Queueable):
 
         return p_yield
 
-    def calculate_yield_after_process(self, config: Config):
-        self.process_yield = self.calculate_yield(self.end_process_time - self.start_process_time ,config)
+    def calculate_yield_after_process(self, config: Config) -> Job:
+        self.process_yield = self.calculate_yield(
+            self.end_process_time - self.start_process_time, config)
         return self
-    
-    def calculate_yield_after_collect(self, config: Config):
-        self.process_yield = self.calculate_yield(self.collect_time - self.start_process_time ,config)
+
+    def calculate_yield_after_collect(self, config: Config) -> Job:
+        self.process_yield = self.calculate_yield(
+            self.collect_time - self.start_process_time, config)
+        return self
+                self.collect_time - self.start_process_time, config)
         return self

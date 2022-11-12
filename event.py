@@ -13,26 +13,26 @@ class EventException:
 
 
 class EventType(Enum):
-    HARVEST_ARRIVAL = 'Harvest_Arrival'
-    HARVEST_DEPARTURE = 'Departure'
-    START_HARVEST_SETUP = 'Start_Harvest_Setup'
-    END_HARVEST_SETUP = 'End_Harvest_Setup'
-    START_HARVESTING = 'Start_Harvesting'
-    END_HARVESTING = 'End_Harvesting'
+    HARVEST_ARRIVAL = 0
+    HARVEST_DEPARTURE = 1
+    START_HARVEST_SETUP = 2
+    END_HARVEST_SETUP = 3
+    START_HARVESTING = 4
+    END_HARVESTING = 5
 
-    PROCESS_ARRIVAL = 'Process_Arrival'
-    PROCESS_DEPARTURE = 'Departure'
-    START_PROCESS_SETUP = 'Start_Process_Setup'
-    END_PROCESS_SETUP = 'End_Process_Setup'
-    START_PROCESSING = 'Start_Processing'
-    END_PROCESSING = 'End_Processing'
+    PROCESS_ARRIVAL = 6
+    PROCESS_DEPARTURE = 7
+    START_PROCESS_SETUP = 8
+    END_PROCESS_SETUP = 9
+    START_PROCESSING = 10
+    END_PROCESSING = 11
 
-    QC_ARRIVAL = 'QC_Arrival'
-    QC_DEPARTURE = 'Departure'
-    START_QC = 'Start_QC'
-    END_QC = 'End_QC'
+    COLLECT = 12
 
-    COLLECT = 'Collect'
+    QC_ARRIVAL = 13
+    QC_DEPARTURE = 14
+    START_QC = 15
+    END_QC = 16
 
 
 class Event:
@@ -70,12 +70,13 @@ class EventQueue:
     def __init__(self):
         self.__buf = []
 
-    def push(self, e: Event):
+    def push(self, e: Event) -> EventQueue:
         heapq.heappush(self.__buf, (e.time, e))
+        return self
 
-    def pop(self):
+    def pop(self) -> Event:
         popped = heapq.heappop(self.__buf)
         return popped[1]
 
-    def empty(self):
+    def empty(self) -> bool:
         return len(self.__buf) == 0

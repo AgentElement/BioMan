@@ -36,12 +36,6 @@ class Environment:
             [ProcessOperator() for _ in range(config.process_operator_count)]
         )
 
-        # When a job is ready to transition to another machine/operator pair,
-        # then it is placed in one of these queues.
-        self.harvested_job_queue = Queue()
-        self.processed_job_queue = Queue()
-        self.done_job_queue = Queue()
-
         # If a job is awaiting an operator, it is placed in this queue
         self.harvest_operator_job_queue = Queue()
         self.process_operator_job_queue = Queue()
@@ -53,13 +47,15 @@ class Environment:
 
         self.qc_machine = QCMachine()
 
-    def get_next_event(self):
+        self.qc_job_queue = Queue()
+
+    def get_next_event(self) -> Event:
         next_event = self.pending_events.pop()
         if self.clock < next_event.time:
             self.clock = next_event.clock
         return next_event
 
-    def populate_initial_events_and_jobs(self):
+    def populate_initial_events_and_jobs(self) -> None:
         jobs = [Job(Patient.random())
                 for _ in range(self.config.patient_count)]
         self.initial_job_queue = Queue(jobs)
@@ -72,8 +68,9 @@ class Environment:
                           elapsed_arrival_time).job(job)
             self.pending_events.push(event)
             elapsed_arrival_time += np.random.randint(2, 5)
+        return self.initial_job_queue
 
-    def assign_jobs_to_operators(self):
+    def assign_jobs_to_operators(self) -> None:
         while job := self.harvest_operator_job_queue.pop():
             if self.harvest_operator_queue.busy():
                 break
@@ -94,7 +91,7 @@ class Environment:
                 .operator(operator)
             self.pending_events.push(event)
 
-    def assign_operators_to_machines(self):
+    def assign_operators_to_machines(self) -> None:
         while operator := self.harvest_machine_job_queue.pop():
             if self.harvest_machine_queue.busy():
                 break
@@ -117,7 +114,7 @@ class Environment:
                 .machine(machine)
             self.pending_events.push(event)
 
-    def simulate(self):
+    def simulate(self) -> None:
         while self.clock <= self.config.simulation_time:
             self.assign_jobs_to_operators()
             self.assign_operators_to_machines()
@@ -127,7 +124,7 @@ class Environment:
             self.process_event(event)
             self.events.append(event)
 
-    def process_event(self, event: Event):
+    def process_event(self, event: Event) -> None:
         {
             EventType.HARVEST_ARRIVAL: lambda e: self.harvest_arrival(e),
             EventType.HARVEST_DEPARTURE: lambda e: self.harvest_departure(e),
@@ -154,31 +151,10 @@ class Environment:
     def harvest_arrival(self, event: Event) -> None:
         self.harvest_operator_job_queue.push(event)
 
-    def process_arrival(self, event: Event) -> None:
-        self.process_operator_job_queue.push(event)
-
-    def qc_arrival(self, event: Event) -> None:
-        pass
-
     def harvest_departure(self, event: Event) -> None:
         self.harvest_machine_job_queue.push(event)
 
-    def process_departure(self, event: Event) -> None:
-        self.process_machine_job_queue.push(event)
-
-    def qc_departure(self, event: Event) -> None:
-        pass
-
     def start_harvest_setup(self, event: Event) -> None:
-        event.machine.start_setup()
-        setup_duration = np.random.randint(1, 3)
-        next_event = Event(EventType.END_SETUP, self.clock + setup_duration) \
-            .job(event.job) \
-            .operator(event.operator) \
-            .machine(event.machine)
-        self.pending_events.push(next_event)
-
-    def start_process_setup(self, event: Event) -> None:
         event.machine.start_setup()
         setup_duration = np.random.randint(1, 3)
         next_event = Event(EventType.END_SETUP, self.clock + setup_duration) \
@@ -190,14 +166,6 @@ class Environment:
     def end_harvest_setup(self, event: Event) -> None:
         event.machine.end_setup()
         next_event = Event(EventType.START_HARVESTING, self.clock) \
-            .job(event.job) \
-            .machine(event.machine)
-        self.harvest_operator_queue.push(event.operator.clear())
-        self.pending_events.push(next_event)
-
-    def end_process_setup(self, event: Event) -> None:
-        event.machine.end_setup()
-        next_event = Event(EventType.START_PROCESSING, self.clock) \
             .job(event.job) \
             .machine(event.machine)
         self.harvest_operator_queue.push(event.operator.clear())
@@ -220,6 +188,29 @@ class Environment:
         self.harvest_machine_queue.push(event.machine)
         self.pending_events.push(next_event)
 
+    def process_arrival(self, event: Event) -> None:
+        self.process_operator_job_queue.push(event)
+
+    def process_departure(self, event: Event) -> None:
+        self.process_machine_job_queue.push(event)
+
+    def start_process_setup(self, event: Event) -> None:
+        event.machine.start_setup()
+        setup_duration = np.random.randint(1, 3)
+        next_event = Event(EventType.END_SETUP, self.clock + setup_duration) \
+            .job(event.job) \
+            .operator(event.operator) \
+            .machine(event.machine)
+        self.pending_events.push(next_event)
+
+    def end_process_setup(self, event: Event) -> None:
+        event.machine.end_setup()
+        next_event = Event(EventType.START_PROCESSING, self.clock) \
+            .job(event.job) \
+            .machine(event.machine)
+        self.harvest_operator_queue.push(event.operator.clear())
+        self.pending_events.push(next_event)
+
     def start_processing(self, event: Event) -> None:
         event.machine.start_work()
         process_duration = event.job.calculate_process_duration(self.config)
@@ -240,12 +231,6 @@ class Environment:
         self.harvest_machine_queue.push(event.machine)
         self.pending_events.push(next_event)
 
-    def start_qc(self, event: Event) -> None:
-        pass
-
-    def end_qc(self, event: Event) -> None:
-        pass
-
     def collect(self, event: Event) -> None:
         if event.job.process_yield <= 0:
             job = event.job.attempt_rework(self.clock)
@@ -256,3 +241,15 @@ class Environment:
                 .calculate_yield_after_collect(self.clock)
             next_event = Event(EventType.QC_ARRIVAL, self.clock).job(job)
         self.pending_events.push(next_event)
+
+    def qc_departure(self, event: Event) -> None:
+        pass
+
+    def qc_arrival(self, event: Event) -> None:
+        pass
+
+    def start_qc(self, event: Event) -> None:
+        pass
+
+    def end_qc(self, event: Event) -> None:
+        pass

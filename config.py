@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections import namedtuple
 
 Range = namedtuple('Range', ['low', 'high'])
@@ -18,7 +20,7 @@ class PatientConfig:
         # Default value from an unstressed system
         self.patient_rates = Rates(8, 1, 1)
 
-    def set_patient_rates(self, bad: int, average: int, good: int):
+    def set_patient_rates(self, bad: int, average: int, good: int) -> PatientConfig:
         self.patient_rates = Rates(bad, average, good)
         return self
 
@@ -48,28 +50,28 @@ class Config:
 
         self.qc_reject_threshold_policy = 0.5
 
-    def set_mfg_dur_pct(self, bad: float, average: float, good: float):
+    def set_mfg_dur_pct(self, bad: float, average: float, good: float) -> Config:
         if bad + average + good != 1.0:
             raise ConfigError
         self.manufacturing_duration_percentage = Rates(bad, average, good)
         return self
 
-    def set_slope(self, low: int, high: int):
+    def set_slope(self, low: int, high: int) -> Config:
         self.slope = Range(low, high)
         return self
 
-    def set_harvest_machine_count(self, count: int):
+    def set_harvest_machine_count(self, count: int) -> Config:
         self.harvest_machine_count = count
         return self
 
-    def set_harvest_operator_count(self, count: int):
+    def set_harvest_operator_count(self, count: int) -> Config:
         self.harvest_operator_count = count
         return self
 
-    def set_process_machine_count(self, count: int):
+    def set_process_machine_count(self, count: int) -> Config:
         self.process_machine_count = count
         return self
 
-    def set_process_operator_count(self, count: int):
+    def set_process_operator_count(self, count: int) -> Config:
         self.process_operator_count = count
         return self

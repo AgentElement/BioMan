@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from util import Queueable
 
 
@@ -9,11 +11,11 @@ class Operator(Queueable):
         self.__busy = False
         self.job = None
 
-    def make_busy(self, busy: bool):
+    def make_busy(self, busy: bool) -> Operator:
         self.__busy = busy
         return self
 
-    def clear(self):
+    def clear(self) -> Operator:
         self.make_busy(False)
         self.job = None
         return self
