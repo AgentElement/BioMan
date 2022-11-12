@@ -77,3 +77,6 @@ class BusyQueue:
     # Are all queueables busy?
     def busy(self) -> bool:
         return len(self.__free_q) == 0
+
+    def free(self, q: Queueable):
+        pass

@@ -49,52 +49,56 @@ class Patient:
 
     def __str__(self):
         return f"Patient {self.gender}, {self.ptype}, " \
-                f"{self.blood_volume}, {self.target_blood_count}"
+            f"{self.blood_volume}, {self.target_blood_count}"
 
 
-class JobState(Enum):
-    BUSY = 0
-    IDLE = 1
-    SETUP = 2
-    DONE = 3
+class JobStatus(Enum):
+    IDLE = 0
+    AWAIT_HARVEST = 1
+    HARVESTING = 2
+    HARVESTED = 3
+    AWAIT_PROCESS = 4
+    PROCESSING = 5
+    PROCESSED = 6
+    DONE = 5
 
 
 class Job(Queueable):
     def __init__(self, patient: Patient):
         super().__init__()
         self.patient = patient
-        self.enter_time = -1
-        self.leave_time = -1
+        self.start_process_time = -1
+        self.end_process_time = -1
+        self.collect_time = -1
         self.rework_times = []
-        self.state = JobState.IDLE
+        self.status = JobStatus.IDLE
+        self.process_yield = 0
 
-    def enter_system(self, clock: float):
-        if self.enter_time is not None:
-            raise JobError
-        self.enter_time = clock
-        return self
+    def set_status(self, status: JobStatus):
+        self.status = status
 
-    def leave_system(self, clock: float):
-        if self.leave_time is not None or self.enter_time is None:
-            raise JobError
-        self.leave_time = clock
-        return self
+    def harvest_yield(self):
+        return 0.8 * self.patient.target_blood_count
 
     def attempt_rework(self, rework_time: float):
+        self.process_time = -1
+        self.collect_time = -1
+        self.status = JobStatus.IDLE
+        self.process_yield = 0
         self.rework_times.append(rework_time)
-        return self
-
-    def set_state(self, state: JobState):
-        self.state = state
         return self
 
     def rework_attempts(self):
         return len(self.rework_times)
 
+    def set_process_times(self, start: float, end: float):
+        self.start_process_time = start 
+        self.end_process_time = end
+        return self
 
-class ProcessJob(Job):
-    def __init__(self, patient: Patient):
-        super().__init__(patient)
+    def set_collect_time(self, clock: float):
+        self.collect_time = clock
+        return self
 
     @staticmethod
     def truncated_norm(lower, mu, sigma):
@@ -120,11 +124,35 @@ class ProcessJob(Job):
         res = X.rvs(1)[0]
         return res
 
-    def calculate_yield(self, duration, config: Config):
+    def targets(self, config: Config) -> tuple(float, float, float, float):
         target_bc = self.patient.target_blood_count
         target_low = target_bc / config.slope.low
         target_high = target_low + config.delta_t
         target_zero = target_high + target_bc / config.slope.high
+
+        return target_low, target_high, target_zero
+
+    def calculate_harvest_duration(self):
+        return np.random.randint(6, 9)
+
+    def calculate_process_duration(self, config: Config):
+        target_bc, target_low, target_high, target_zero = self.targets(config)
+        process_duration = random.choices([
+            np.random.uniform(0, target_low),
+            np.random.uniform(target_low, target_high),
+            np.random.uniform(target_high, target_zero + 4)],
+            weights=self.mfg_dura_perc)[0]
+        process_duration_in_hours = process_duration * 24
+        return process_duration_in_hours
+
+    def calculate_yield(self, duration, config: Config):
+        if self.status not in [JobStatus.PROCESSED, JobStatus.DONE]:
+            raise JobError
+
+        duration = self.collect_time - self.process_time
+
+        target_bc = self.patient.target_blood_count
+        target_low, target_high, target_zero = self.targets(config)
 
         if duration <= target_low:
             p_yield = config.slope.low * duration
@@ -150,7 +178,10 @@ class ProcessJob(Job):
 
         return p_yield
 
-
-class HarvestJob(Job):
-    def __init__(self, patient: Patient):
-        super().__init__(patient)
+    def calculate_yield_after_process(self, config: Config):
+        self.process_yield = self.calculate_yield(self.end_process_time - self.start_process_time ,config)
+        return self
+    
+    def calculate_yield_after_collect(self, config: Config):
+        self.process_yield = self.calculate_yield(self.collect_time - self.start_process_time ,config)
+        return self

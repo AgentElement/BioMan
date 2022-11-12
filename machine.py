@@ -1,6 +1,8 @@
+import numpy as np
+
 from util import Queueable
 from enum import Enum
-from job import Job, HarvestJob, ProcessJob, JobState
+from job import Job, HarvestJob, ProcessJob, JobStatus
 from operator import Operator, HarvestOperator, ProcessOperator
 
 
@@ -15,17 +17,29 @@ class MachineState(Enum):
     BUSY = 3
     DONE = 4
 
+# TODO: set job statuses in machines
 
 class Machine(Queueable):
     def __init__(self):
         self.state = MachineState.IDLE
-        self.operator = None
-        self.job = None
+        self.operator: Operator = None
+        self.job: Job = None
 
-    def start_setup(self, job: Job, operator: Operator):
+    def initialize(self, operator: Operator):
+        if operator.job is None:
+            raise MachineError
+
+        self.operator = operator
+        self.job = operator.job
+
+    def start_setup(self):
+        if (self.state != MachineState.IDLE
+                or self.operator is None
+                or self.job is None):
+            raise MachineError
+
         self.state = MachineState.SETUP
-        self.operator = operator.make_busy(True)
-        self.job = job.set_state(JobState.SETUP)
+        self.operator.make_busy(True)
         return self
 
     def end_setup(self):
@@ -35,28 +49,24 @@ class Machine(Queueable):
             raise MachineError
 
         self.state = MachineState.ACTIVE
-        self.job.set_state(JobState.IDLE)
         self.operator.make_busy(False)
+        self.operator = None
         return self
 
     def start_work(self):
         if (self.state != MachineState.SETUP
-                or self.operator is None
                 or self.job is None):
             raise MachineError
 
         self.state = MachineState.BUSY
-        self.job.set_state(JobState.BUSY)
         return self
 
     def end_work(self):
         if (self.state != MachineState.BUSY
-                or self.operator is None
                 or self.job is None):
             raise MachineError
 
         self.state = MachineState.DONE
-        self.job.set_state(JobState.IDLE)
         return self
 
     def clear(self):
@@ -69,8 +79,12 @@ class HarvestMachine(Machine):
     def __init__(self):
         super().__init__()
 
-    def start_setup(self, job: HarvestJob, operator: HarvestOperator):
-        super().start_setup(job, operator)
+    def initialize(self, operator: HarvestOperator):
+        super().initialize(operator)
+        return self
+
+    def start_setup(self):
+        super().start_setup(self.operator)
         return self
 
 
@@ -78,11 +92,17 @@ class ProcessMachine(Machine):
     def __init__(self):
         super().__init__()
 
-    def start_setup(self, job: ProcessJob, operator: ProcessOperator):
-        super().start_setup(job, operator)
+    def initialize(self, operator: ProcessOperator):
+        super().initialize(operator)
         return self
 
+    def start_setup(self, operator: ProcessOperator):
+        super().start_setup(operator)
+        return self
 
-class QCMachine(Machine):
+class QCMachine:
     def __init__(self):
         super().__init__()
+
+    def quality_policy(self) -> bool:
+        return np.random.uniform(0, 1) > 0.95

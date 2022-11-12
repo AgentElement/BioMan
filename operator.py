@@ -7,9 +7,15 @@ class Operator(Queueable):
     def __init__(self):
         super().__init__()
         self.__busy = False
+        self.job = None
 
     def make_busy(self, busy: bool):
         self.__busy = busy
+        return self
+
+    def clear(self):
+        self.make_busy(False)
+        self.job = None
         return self
 
 

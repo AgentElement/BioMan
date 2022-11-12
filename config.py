@@ -46,6 +46,8 @@ class Config:
         # true normal std dev is ~0.693, but I'm copying the spec
         self.yield_standard_deviation = 0.7
 
+        self.qc_reject_threshold_policy = 0.5
+
     def set_mfg_dur_pct(self, bad: float, average: float, good: float):
         if bad + average + good != 1.0:
             raise ConfigError

@@ -13,23 +13,22 @@ class EventException:
 
 
 class EventType(Enum):
-    PROCESS_ARRIVAL = 'Process_Arrival'
     HARVEST_ARRIVAL = 'Harvest_Arrival'
-    QC_ARRIVAL = 'QC_Arrival'
-
-    PROCESS_DEPARTURE = 'Departure'
     HARVEST_DEPARTURE = 'Departure'
-    QC_DEPARTURE = 'Departure'
-
-    START_SETUP = 'Start_Setup'
-    END_SETUP = 'End_Setup'
-
+    START_HARVEST_SETUP = 'Start_Harvest_Setup'
+    END_HARVEST_SETUP = 'End_Harvest_Setup'
     START_HARVESTING = 'Start_Harvesting'
     END_HARVESTING = 'End_Harvesting'
 
+    PROCESS_ARRIVAL = 'Process_Arrival'
+    PROCESS_DEPARTURE = 'Departure'
+    START_PROCESS_SETUP = 'Start_Process_Setup'
+    END_PROCESS_SETUP = 'End_Process_Setup'
     START_PROCESSING = 'Start_Processing'
     END_PROCESSING = 'End_Processing'
 
+    QC_ARRIVAL = 'QC_Arrival'
+    QC_DEPARTURE = 'Departure'
     START_QC = 'Start_QC'
     END_QC = 'End_QC'
 
@@ -49,8 +48,6 @@ class Event:
         self.machine = None
         self.operator = None
         self.job = None
-
-        self.in_rework = False
 
     def __str__(self) -> str:
         return f"Event {self.event_type}  at {self.time}"
