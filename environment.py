@@ -19,6 +19,7 @@ class Environment:
         self.populate_initial_events_and_jobs()
 
         self.events = []
+        self.finished_jobs = []
 
         self.harvest_machine_queue = Queue(
             [HarvestMachine() for _ in range(config.harvest_machine_count)]
@@ -149,10 +150,10 @@ class Environment:
         }[event.event_type](event)
 
     def harvest_arrival(self, event: Event) -> None:
-        self.harvest_operator_job_queue.push(event)
+        self.harvest_operator_job_queue.push(event.job)
 
     def harvest_departure(self, event: Event) -> None:
-        self.harvest_machine_job_queue.push(event)
+        self.harvest_machine_job_queue.push(event.job)
 
     def start_harvest_setup(self, event: Event) -> None:
         event.machine.start_setup()
@@ -224,8 +225,9 @@ class Environment:
         self.pending_events.push(next_event)
 
     def end_processing(self, event: Event) -> None:
-        event.machine.end_work()
-        event.machine.clear()
+        event.machine \
+            .end_work() \
+            .clear()
         next_event = Event(EventType.COLLECT, self.clock) \
             .job(event.job)
         self.harvest_machine_queue.push(event.machine)
@@ -242,14 +244,30 @@ class Environment:
             next_event = Event(EventType.QC_ARRIVAL, self.clock).job(job)
         self.pending_events.push(next_event)
 
-    def qc_departure(self, event: Event) -> None:
-        pass
-
     def qc_arrival(self, event: Event) -> None:
-        pass
+        self.qc_job_queue.push(event.job)
+        next_event = Event(EventType.QC_DEPARTURE, self.clock) \
+            .job(event.job)
+        self.pending_events.push(next_event)
+
+    def qc_departure(self, event: Event) -> None:
+        next_event = Event(EventType.START_QC, self.clock) \
+            .job(event.job)
+        self.pending_events.push(next_event)
 
     def start_qc(self, event: Event) -> None:
-        pass
+        qc_duration = 0.5
+        if self.qc_machine.quality_policy():
+            next_event = Event(EventType.END_QC, self.clock + qc_duration) \
+                    .job(event.job)
+            self.pending_events.push(next_event)
+        else:
+            if event.job.rework_attempts() <= self.config.max_rework_count:
+                next_event = Event(EventType.HARVEST_ARRIVAL, self.clock + qc_duration) \
+                    .job(event.job.attempt_rework(self.clock))
+                self.pending_events.push(next_event)
+            else:
+                self.finished_jobs.append(event.job)
 
     def end_qc(self, event: Event) -> None:
-        pass
+        self.finished_jobs.append(event.job)
