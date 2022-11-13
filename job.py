@@ -50,8 +50,8 @@ class Patient:
         return Patient(gender, ptype, pconfig)
 
     def __str__(self) -> str:
-        return f"Patient {self.gender}, {self.ptype}, " \
-            f"{self.blood_volume}, {self.target_blood_count}"
+        return f"Patient [{self.gender.name}, {self.ptype.name}, " \
+            f"{self.blood_volume}, {self.target_blood_count}]"
 
 
 class JobStatus(Enum):
@@ -66,7 +66,7 @@ class JobStatus(Enum):
 
 
 class Job(Queueable):
-    def __init__(self, patient: Patient):
+    def __init__(self, patient: Patient, id: int):
         super().__init__()
         self.patient = patient
         self.start_process_time = -1
@@ -75,6 +75,11 @@ class Job(Queueable):
         self.rework_times = []
         self.status = JobStatus.IDLE
         self.process_yield = 0
+        self.id = id
+
+    def __str__(self):
+        return f"Job {self.id}\n"\
+                f"\t with patient :{self.patient}"
 
     def set_status(self, status: JobStatus) -> Job:
         self.status = status

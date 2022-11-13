@@ -50,7 +50,10 @@ class Event:
         self.job = None
 
     def __str__(self) -> str:
-        return f"Event {self.event_type}  at {self.time}"
+        return f"Event {self.event_type} at {self.time}\n" \
+            f"\tMachine: {self.machine}\n" \
+            f"\tOperator: {self.operator}\n" \
+            f"\tJob: {self.job}\n"
 
     def machine(self, machine: Machine) -> Event:
         self.machine = machine

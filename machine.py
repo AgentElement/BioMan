@@ -22,10 +22,14 @@ class MachineState(Enum):
 
 # TODO: set job statuses in machines
 class Machine(Queueable):
-    def __init__(self):
+    def __init__(self, id: int):
         self.state = MachineState.IDLE
         self.operator: Operator = None
         self.job: Job = None
+        self.id = id
+
+    def __str__(self) -> str:
+        return f"Machine {self.id} in state {self.state.name}"
 
     def initialize(self, operator: Operator) -> Machine:
         if operator.job is None:

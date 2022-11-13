@@ -6,10 +6,14 @@ from util import Queueable
 # An operator is a Queueable that can be busy working a machine.
 # That's literally it
 class Operator(Queueable):
-    def __init__(self):
+    def __init__(self, id):
         super().__init__()
         self.__busy = False
         self.job = None
+        self.id = id
+
+    def __str__(self):
+        return f"Operator {self.id}"
 
     def make_busy(self, busy: bool) -> Operator:
         self.__busy = busy

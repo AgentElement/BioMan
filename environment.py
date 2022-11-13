@@ -22,19 +22,19 @@ class Environment:
         self.finished_jobs = []
 
         self.harvest_machine_queue = Queue(
-            [HarvestMachine() for _ in range(config.harvest_machine_count)]
+            [HarvestMachine(i) for i in range(config.harvest_machine_count)]
         )
 
         self.process_machine_queue = Queue(
-            [ProcessMachine() for _ in range(config.harvest_machine_count)]
+            [ProcessMachine(i) for i in range(config.harvest_machine_count)]
         )
 
         self.harvest_operator_queue = Queue(
-            [HarvestOperator() for _ in range(config.harvest_operator_count)]
+            [HarvestOperator(i) for i in range(config.harvest_operator_count)]
         )
 
         self.process_operator_queue = Queue(
-            [ProcessOperator() for _ in range(config.process_operator_count)]
+            [ProcessOperator(i) for i in range(config.process_operator_count)]
         )
 
         # If a job is awaiting an operator, it is placed in this queue
@@ -122,6 +122,7 @@ class Environment:
             if self.pending_events.empty():
                 break
             event = self.get_next_event()
+            print(event)
             self.process_event(event)
             self.events.append(event)
 
