@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
+from enum import Enum
 
 from util import Queueable
-from enum import Enum
-from job import Job, HarvestJob, ProcessJob, JobStatus
-from operator import Operator, HarvestOperator, ProcessOperator
+from op import Operator, HarvestOperator, ProcessOperator
+from job import Job, JobStatus
 
 
 class MachineError(Exception):
@@ -79,6 +79,7 @@ class Machine(Queueable):
     def clear(self) -> Machine:
         self.state = MachineState.IDLE
         self.operator = None
+        self.job.set_status(JobStatus.IDLE)
         self.job = None
         return self
 
@@ -94,7 +95,7 @@ class HarvestMachine(Machine):
     def start_setup(self) -> HarvestMachine:
         super().start_setup(self.operator)
         return self
-    
+
 
 class ProcessMachine(Machine):
     def __init__(self):

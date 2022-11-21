@@ -1,11 +1,11 @@
 import numpy as np
 
-from util import BusyQueue, Queue
 from config import Config
+from util import Queue
+from op import HarvestOperator, ProcessOperator
 from job import Job, Patient
 from machine import HarvestMachine, ProcessMachine, QCMachine
-from operator import HarvestOperator, ProcessOperator
-from event import Event, EventQueue, EventType, EventException
+from event import Event, EventQueue, EventType
 
 
 class Environment:
@@ -57,8 +57,8 @@ class Environment:
         return next_event
 
     def populate_initial_events_and_jobs(self) -> None:
-        jobs = [Job(Patient.random())
-                for _ in range(self.config.patient_count)]
+        jobs = [Job(Patient.random(), i)
+                for i in range(self.config.patient_count)]
         self.initial_job_queue = Queue(jobs)
         elapsed_arrival_time = 0
         for job in jobs:
@@ -142,12 +142,12 @@ class Environment:
             EventType.START_PROCESSING: lambda e: self.start_processing(e),
             EventType.END_PROCESSING: lambda e: self.end_processing(e),
 
+            EventType.COLLECT: lambda e: self.collect(e),
+
             EventType.QC_ARRIVAL: lambda e: self.qc_arrival(e),
             EventType.QC_DEPARTURE: lambda e: self.qc_departure(e),
             EventType.START_QC: lambda e: self.start_qc(e),
             EventType.END_QC: lambda e: self.end_qc(e),
-
-            EventType.COLLECT: lambda e: self.collect(e),
         }[event.event_type](event)
 
     def harvest_arrival(self, event: Event) -> None:
@@ -260,7 +260,7 @@ class Environment:
         qc_duration = 0.5
         if self.qc_machine.quality_policy():
             next_event = Event(EventType.END_QC, self.clock + qc_duration) \
-                    .job(event.job)
+                .job(event.job)
             self.pending_events.push(next_event)
         else:
             if event.job.rework_attempts() <= self.config.max_rework_count:

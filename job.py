@@ -4,10 +4,10 @@ import random
 
 from scipy import stats
 import numpy as np
-
 from enum import Enum
-from util import Queueable
+
 from config import Config, PatientConfig
+from util import Queueable
 
 
 class JobError(Exception):
@@ -194,6 +194,4 @@ class Job(Queueable):
     def calculate_yield_after_collect(self, config: Config) -> Job:
         self.process_yield = self.calculate_yield(
             self.collect_time - self.start_process_time, config)
-        return self
-                self.collect_time - self.start_process_time, config)
         return self

@@ -3,9 +3,9 @@ from __future__ import annotations
 from heapq import heapq
 from enum import Enum
 
+from op import Operator
 from job import Job
 from machine import Machine
-from operator import Operator
 
 
 class EventException:

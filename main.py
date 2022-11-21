@@ -1,5 +1,10 @@
+from config import Config
+from environment import Environment
+
+
 def main():
-    pass
+    env = Environment(Config())
+    env.simulate()
 
 
 if __name__ == '__main__':
