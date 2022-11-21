@@ -29,7 +29,7 @@ class Queue:
         self.__buf = deque(init_elems)
 
     def peek(self) -> Queueable:
-        if len(self.__buf) == 0:
+        if self.empty():
             raise IndexError
         return self.__buf[0]
 
@@ -42,9 +42,18 @@ class Queue:
         return self
 
     def pop(self) -> Queueable:
+        if self.empty():
+            return None
         popped = self.__buf.popleft()
         popped.set_queued(self.inverting)
         return popped
+
+    def empty(self) -> bool:
+        return len(self.__buf) == 0
+
+    # debug only
+    def getbuf(self) -> deque:
+        return self.__buf
 
 
 # Paired queue for Jobs, Machines, Operators (Queueables)

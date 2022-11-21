@@ -78,8 +78,8 @@ class Job(Queueable):
         self.id = id
 
     def __str__(self):
-        return f"Job {self.id}\n"\
-                f"\t with patient :{self.patient}"
+        return f"Job {self.id} {self.rework_times}\n"\
+                f"\t with patient: {self.patient}"
 
     def set_status(self, status: JobStatus) -> Job:
         self.status = status
@@ -144,20 +144,19 @@ class Job(Queueable):
         return np.random.randint(6, 9)
 
     def calculate_process_duration(self, config: Config) -> float:
-        target_bc, target_low, target_high, target_zero = self.targets(config)
+        target_bc = self.patient.target_blood_count
+        target_low, target_high, target_zero = self.targets(config)
         process_duration = random.choices([
             np.random.uniform(0, target_low),
             np.random.uniform(target_low, target_high),
             np.random.uniform(target_high, target_zero + 4)],
-            weights=self.mfg_dura_perc)[0]
+            weights=config.manufacturing_duration_percentage)[0]
         process_duration_in_hours = process_duration * 24
         return process_duration_in_hours
 
-    def calculate_yield(self, config: Config) -> float:
-        if self.status not in [JobStatus.PROCESSED, JobStatus.DONE]:
-            raise JobError
-
-        duration = self.collect_time - self.process_time
+    def calculate_yield(self, duration: float, config: Config) -> float:
+        #  if self.status not in [JobStatus.PROCESSED, JobStatus.DONE]:
+        #      raise JobError
 
         target_bc = self.patient.target_blood_count
         target_low, target_high, target_zero = self.targets(config)

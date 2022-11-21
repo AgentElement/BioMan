@@ -7,7 +7,7 @@ from job import Job
 # An operator is a Queueable that can be busy working a machine.
 # That's literally it
 class Operator(Queueable):
-    def __init__(self, id):
+    def __init__(self, id: int):
         super().__init__()
         self.__busy = False
         self.job: Job = None
@@ -26,11 +26,11 @@ class Operator(Queueable):
         return self
 
 
-class HarvestOperator(Queueable):
-    def __init__(self):
-        super().__init__()
+class HarvestOperator(Operator):
+    def __init__(self, id: int):
+        super().__init__(id)
 
 
-class ProcessOperator(Queueable):
-    def __init__(self):
-        super().__init__()
+class ProcessOperator(Operator):
+    def __init__(self, id: int):
+        super().__init__(id)

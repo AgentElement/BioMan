@@ -43,8 +43,8 @@ class Environment:
 
         # If a job and operator are awaiting a machine, the operator
         # is placed in this queue
-        self.harvest_machine_job_queue = Queue()
-        self.process_machine_job_queue = Queue()
+        self.harvest_machine_operator_queue = Queue()
+        self.process_machine_operator_queue = Queue()
 
         self.qc_machine = QCMachine()
 
@@ -53,66 +53,74 @@ class Environment:
     def get_next_event(self) -> Event:
         next_event = self.pending_events.pop()
         if self.clock < next_event.time:
-            self.clock = next_event.clock
+            self.clock = next_event.time
         return next_event
 
     def populate_initial_events_and_jobs(self) -> None:
-        jobs = [Job(Patient.random(), i)
+        jobs = [Job(Patient.random(self.config.patient_config), i)
                 for i in range(self.config.patient_count)]
         self.initial_job_queue = Queue(jobs)
         elapsed_arrival_time = 0
         for job in jobs:
             if elapsed_arrival_time > self.config.simulation_time:
                 break
-            job.enter_system(elapsed_arrival_time)
+            #  job.enter_system(elapsed_arrival_time)
             event = Event(EventType.HARVEST_ARRIVAL,
-                          elapsed_arrival_time).job(job)
+                          elapsed_arrival_time).set_job(job)
             self.pending_events.push(event)
             elapsed_arrival_time += np.random.randint(2, 5)
         return self.initial_job_queue
 
     def assign_jobs_to_operators(self) -> None:
+        if self.harvest_operator_queue.empty():
+            return
         while job := self.harvest_operator_job_queue.pop():
-            if self.harvest_operator_queue.busy():
+            if self.harvest_operator_queue.empty():
                 break
-            operator = self.process_operator_queue.pop()
+            operator = self.harvest_operator_queue.pop()
             operator.job = job
             event = Event(EventType.HARVEST_DEPARTURE, self.clock) \
-                .job(job) \
-                .operator(operator)
+                .set_job(job) \
+                .set_operator(operator)
             self.pending_events.push(event)
-
+            
+        if self.process_operator_queue.empty():
+            return
         while job := self.process_operator_job_queue.pop():
-            if self.harvest_operator_queue.busy():
+            if self.process_operator_queue.empty():
                 break
             operator = self.process_operator_queue.pop()
             operator.job = job
             event = Event(EventType.PROCESS_DEPARTURE, self.clock) \
-                .job(job) \
-                .operator(operator)
+                .set_job(job) \
+                .set_operator(operator)
             self.pending_events.push(event)
 
     def assign_operators_to_machines(self) -> None:
-        while operator := self.harvest_machine_job_queue.pop():
-            if self.harvest_machine_queue.busy():
+        if self.harvest_machine_queue.empty():
+            return
+        while operator := self.harvest_machine_operator_queue.pop():
+            if self.harvest_machine_queue.empty():
                 break
             machine = self.harvest_machine_queue.pop()
             machine.initialize(operator)
-            event = Event(EventType.START_SETUP, self.clock) \
-                .job(operator.job) \
-                .operator(operator) \
-                .machine(machine)
+            event = Event(EventType.START_HARVEST_SETUP, self.clock) \
+                .set_job(operator.job) \
+                .set_operator(operator) \
+                .set_machine(machine)
             self.pending_events.push(event)
 
-        while operator := self.process_operator_job_queue.pop():
-            if self.process_machine_queue.busy():
+        if self.process_machine_queue.empty():
+            return
+        while operator := self.process_machine_operator_queue.pop():
+            if self.process_machine_queue.empty():
                 break
             machine = self.process_machine_queue.pop()
             machine.initialize(operator)
-            event = Event(EventType.START_SETUP, self.clock) \
-                .job(operator.job) \
-                .operator(operator) \
-                .machine(machine)
+            event = Event(EventType.START_PROCESS_SETUP, self.clock) \
+                .set_job(operator.job) \
+                .set_operator(operator) \
+                .set_machine(machine)
             self.pending_events.push(event)
 
     def simulate(self) -> None:
@@ -154,22 +162,22 @@ class Environment:
         self.harvest_operator_job_queue.push(event.job)
 
     def harvest_departure(self, event: Event) -> None:
-        self.harvest_machine_job_queue.push(event.job)
+        self.harvest_machine_operator_queue.push(event.operator)
 
     def start_harvest_setup(self, event: Event) -> None:
         event.machine.start_setup()
         setup_duration = np.random.randint(1, 3)
-        next_event = Event(EventType.END_SETUP, self.clock + setup_duration) \
-            .job(event.job) \
-            .operator(event.operator) \
-            .machine(event.machine)
+        next_event = Event(EventType.END_HARVEST_SETUP, self.clock + setup_duration) \
+            .set_job(event.job) \
+            .set_operator(event.operator) \
+            .set_machine(event.machine)
         self.pending_events.push(next_event)
 
     def end_harvest_setup(self, event: Event) -> None:
         event.machine.end_setup()
         next_event = Event(EventType.START_HARVESTING, self.clock) \
-            .job(event.job) \
-            .machine(event.machine)
+            .set_job(event.job) \
+            .set_machine(event.machine)
         self.harvest_operator_queue.push(event.operator.clear())
         self.pending_events.push(next_event)
 
@@ -178,38 +186,38 @@ class Environment:
         harvest_duration = event.job.calculate_harvest_duration()
         next_event = Event(
             EventType.END_HARVESTING, self.clock + harvest_duration) \
-            .job(event.job) \
-            .machine(event.machine)
+            .set_job(event.job) \
+            .set_machine(event.machine)
         self.pending_events.push(next_event)
 
     def end_harvesting(self, event: Event) -> None:
         event.machine.end_work()
         event.machine.clear()
         next_event = Event(EventType.PROCESS_ARRIVAL, self.clock) \
-            .job(event.job)
+            .set_job(event.job)
         self.harvest_machine_queue.push(event.machine)
         self.pending_events.push(next_event)
 
     def process_arrival(self, event: Event) -> None:
-        self.process_operator_job_queue.push(event)
+        self.process_operator_job_queue.push(event.job)
 
     def process_departure(self, event: Event) -> None:
-        self.process_machine_job_queue.push(event)
+        self.process_machine_operator_queue.push(event.operator)
 
     def start_process_setup(self, event: Event) -> None:
         event.machine.start_setup()
         setup_duration = np.random.randint(1, 3)
-        next_event = Event(EventType.END_SETUP, self.clock + setup_duration) \
-            .job(event.job) \
-            .operator(event.operator) \
-            .machine(event.machine)
+        next_event = Event(EventType.END_PROCESS_SETUP, self.clock + setup_duration) \
+            .set_job(event.job) \
+            .set_operator(event.operator) \
+            .set_machine(event.machine)
         self.pending_events.push(next_event)
 
     def end_process_setup(self, event: Event) -> None:
         event.machine.end_setup()
         next_event = Event(EventType.START_PROCESSING, self.clock) \
-            .job(event.job) \
-            .machine(event.machine)
+            .set_job(event.job) \
+            .set_machine(event.machine)
         self.harvest_operator_queue.push(event.operator.clear())
         self.pending_events.push(next_event)
 
@@ -218,8 +226,8 @@ class Environment:
         process_duration = event.job.calculate_process_duration(self.config)
         next_event = Event(
             EventType.END_PROCESSING, self.clock + process_duration) \
-            .job(event.job) \
-            .machine(event.machine)
+            .set_job(event.job) \
+            .set_machine(event.machine)
         event.job \
             .set_process_times(self.clock, self.clock + process_duration) \
             .calculate_yield_after_process(self.config)
@@ -230,42 +238,42 @@ class Environment:
             .end_work() \
             .clear()
         next_event = Event(EventType.COLLECT, self.clock) \
-            .job(event.job)
+            .set_job(event.job)
         self.harvest_machine_queue.push(event.machine)
         self.pending_events.push(next_event)
 
     def collect(self, event: Event) -> None:
         if event.job.process_yield <= 0:
             job = event.job.attempt_rework(self.clock)
-            next_event = Event(EventType.HARVEST_ARRIVAL, self.clock).job(job)
+            next_event = Event(EventType.HARVEST_ARRIVAL, self.clock).set_job(job)
         else:
             event.job \
                 .set_collect_time(self.clock) \
-                .calculate_yield_after_collect(self.clock)
-            next_event = Event(EventType.QC_ARRIVAL, self.clock).job(job)
+                .calculate_yield_after_collect(self.config)
+            next_event = Event(EventType.QC_ARRIVAL, self.clock).set_job(event.job)
         self.pending_events.push(next_event)
 
     def qc_arrival(self, event: Event) -> None:
-        self.qc_job_queue.push(event.job)
+        #  self.qc_job_queue.push(event.job)
         next_event = Event(EventType.QC_DEPARTURE, self.clock) \
-            .job(event.job)
+            .set_job(event.job)
         self.pending_events.push(next_event)
 
     def qc_departure(self, event: Event) -> None:
         next_event = Event(EventType.START_QC, self.clock) \
-            .job(event.job)
+            .set_job(event.job)
         self.pending_events.push(next_event)
 
     def start_qc(self, event: Event) -> None:
         qc_duration = 0.5
         if self.qc_machine.quality_policy():
             next_event = Event(EventType.END_QC, self.clock + qc_duration) \
-                .job(event.job)
+                .set_job(event.job)
             self.pending_events.push(next_event)
         else:
             if event.job.rework_attempts() <= self.config.max_rework_count:
                 next_event = Event(EventType.HARVEST_ARRIVAL, self.clock + qc_duration) \
-                    .job(event.job.attempt_rework(self.clock))
+                    .set_job(event.job.attempt_rework(self.clock))
                 self.pending_events.push(next_event)
             else:
                 self.finished_jobs.append(event.job)

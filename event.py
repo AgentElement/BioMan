@@ -1,12 +1,12 @@
 from __future__ import annotations
+from functools import total_ordering
 
-from heapq import heapq
+import heapq
 from enum import Enum
 
 from op import Operator
 from job import Job
 from machine import Machine
-
 
 class EventException:
     pass
@@ -35,6 +35,7 @@ class EventType(Enum):
     END_QC = 16
 
 
+@total_ordering
 class Event:
     """
     Event_type includes arrival, harvest, process, finish
@@ -55,15 +56,26 @@ class Event:
             f"\tOperator: {self.operator}\n" \
             f"\tJob: {self.job}\n"
 
-    def machine(self, machine: Machine) -> Event:
+    # This is not a good hash function, but we only need a hash to ensure that
+    # events can be ordered (EventQueue requires this)
+    def __hash__(self):
+        return hash(str(self))
+
+    def __lt__(self: Event, other: Event):
+        return self.time < other.time
+
+    def __eq__(self: Event, other: Event):
+        return self.time == other.time
+
+    def set_machine(self, machine: Machine) -> Event:
         self.machine = machine
         return self
 
-    def operator(self, operator: Operator) -> Event:
+    def set_operator(self, operator: Operator) -> Event:
         self.operator = operator
         return self
 
-    def job(self, job: Job) -> Event:
+    def set_job(self, job: Job) -> Event:
         self.job = job
         return self
 

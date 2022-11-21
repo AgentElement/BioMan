@@ -61,7 +61,7 @@ class Machine(Queueable):
         return self
 
     def start_work(self) -> Machine:
-        if (self.state != MachineState.SETUP
+        if (self.state != MachineState.ACTIVE
                 or self.job is None):
             raise MachineError
 
@@ -85,28 +85,28 @@ class Machine(Queueable):
 
 
 class HarvestMachine(Machine):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, id: int):
+        super().__init__(id)
 
     def initialize(self, operator: HarvestOperator) -> HarvestMachine:
         super().initialize(operator)
         return self
 
     def start_setup(self) -> HarvestMachine:
-        super().start_setup(self.operator)
+        super().start_setup()
         return self
 
 
 class ProcessMachine(Machine):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, id: int):
+        super().__init__(id)
 
     def initialize(self, operator: ProcessOperator) -> ProcessMachine:
         super().initialize(operator)
         return self
 
-    def start_setup(self, operator: ProcessOperator) -> ProcessMachine:
-        super().start_setup(operator)
+    def start_setup(self) -> ProcessMachine:
+        super().start_setup()
         return self
 
 
